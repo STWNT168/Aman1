@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>英語道場 — English Dojo Tracker</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#100F0B">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700;800&family=Noto+Sans:wght@400;500;600;700&display=swap');
+
+  :root{
+    --ink:#100F0B;
+    --panel:#1B1913;
+    --panel-2:#221F17;
+    --hairline:#332F24;
+    --paper:#EAE3D2;
+    --paper-dim:#B7AF9B;
+    --red:#B23A2E;
+    --red-dim:#7A2A21;
+    --gold:#C9A24B;
+    --steel:#7C8B99;
+    --green:#5C7A4E;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  body{
+    margin:0; background:var(--ink); color:var(--paper);
+    font-family:'Noto Sans',sans-serif;
+    padding-bottom:70px;
+    background-image:
+      radial-gradient(ellipse at top, rgba(178,58,46,0.06), transparent 60%),
+      repeating-linear-gradient(180deg, rgba(255,255,255,0.012) 0px, rgba(255,255,255,0.012) 1px, transparent 1px, transparent 3px);
+    min-height:100vh;
+  }
+  h1,h2,h3,.disp{ font-family:'Shippori Mincho', serif; }
+
+  header{
+    padding:28px 20px 20px;
+    border-bottom:1px solid var(--hairline);
+    position:sticky; top:0; z-index:10;
+    background:linear-gradient(180deg, var(--ink) 70%, rgba(16,15,11,0.96));
+    backdrop-filter: blur(6px);
+  }
+  .kanji{ font-size:13px; color:var(--red); letter-spacing:0.3em; }
+  h1{ margin:2px 0 0; font-size:26px; font-weight:700; color:var(--paper); letter-spacing:0.01em; }
+  .sub{ font-size:12.5px; color:var(--paper-dim); margin-top:3px; }
+
+  .belt-wrap{ margin-top:18px; }
+  .belt-label{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px; }
+  .belt-rank{ font-family:'Shippori Mincho',serif; font-size:15px; font-weight:700; }
+  .belt-pct{ font-size:12px; color:var(--paper-dim); }
+  .belt{ position:relative; height:22px; border-radius:3px; background:var(--panel-2); border:1px solid var(--hairline); overflow:hidden; }
+  .belt-fill{ height:100%; border-radius:2px; transition:width 0.5s ease, background 0.5s ease; position:relative; }
+  .belt-fill::after{ content:''; position:absolute; right:0; top:0; bottom:0; width:2px; background:rgba(0,0,0,0.35); }
+  .belt-knot{ position:absolute; right:6px; top:50%; transform:translateY(-50%); font-size:10px; color:rgba(0,0,0,0.55); font-weight:700; letter-spacing:0.05em; }
+
+  .stats{ display:flex; gap:10px; margin-top:14px; }
+  .stat{ flex:1; background:var(--panel); border:1px solid var(--hairline); border-radius:6px; padding:9px 10px; text-align:center; }
+  .stat b{ display:block; font-size:18px; font-family:'Shippori Mincho',serif; color:var(--gold); }
+  .stat span{ font-size:10px; color:var(--paper-dim); text-transform:uppercase; letter-spacing:0.06em; }
+
+  .controls{ display:flex; gap:8px; padding:14px 20px; overflow-x:auto; border-bottom:1px solid var(--hairline); }
+  .pill{ flex:0 0 auto; padding:6px 13px; border-radius:20px; border:1px solid var(--hairline); background:var(--panel); color:var(--paper-dim); font-size:12.5px; cursor:pointer; white-space:nowrap; }
+  .pill.active{ background:var(--red-dim); border-color:var(--red); color:var(--paper); }
+
+  .content{ padding:16px 20px 0; }
+  .empty-state{ text-align:center; padding:40px 20px; color:var(--paper-dim); font-size:13px; }
+  .chapter{ margin-bottom:14px; border:1px solid var(--hairline); border-radius:8px; overflow:hidden; background:var(--panel); }
+  .chapter-head{ display:flex; align-items:center; justify-content:space-between; padding:12px 14px; cursor:pointer; user-select:none; }
+  .chapter-title{ display:flex; align-items:center; gap:10px; }
+  .chapter-num{ font-family:'Shippori Mincho',serif; color:var(--red); font-size:13px; }
+  .chapter-name{ font-size:14.5px; font-weight:600; }
+  .chapter-meta{ font-size:11px; color:var(--paper-dim); }
+  .chapter-arrow{ transition:transform 0.25s; color:var(--paper-dim); font-size:11px; }
+  .chapter.open .chapter-arrow{ transform:rotate(90deg); }
+  .chapter-body{ display:none; border-top:1px solid var(--hairline); }
+  .chapter.open .chapter-body{ display:block; }
+
+  .row{ display:flex; align-items:flex-start; gap:10px; padding:10px 14px; border-bottom:1px solid var(--hairline); }
+  .row:last-child{ border-bottom:none; }
+  .row.watched{ background:rgba(92,122,78,0.06); }
+  .check{ width:22px; height:22px; border-radius:50%; border:1.5px solid var(--steel); flex:0 0 22px; margin-top:2px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:12px; color:transparent; }
+  .row.watched .check{ background:var(--green); border-color:var(--green); color:var(--ink); }
+  .row-main{ flex:1; min-width:0; }
+  .row-top{ display:flex; align-items:center; gap:8px; }
+  .vid-idx{ font-size:10.5px; color:var(--paper-dim); font-variant-numeric:tabular-nums; flex:0 0 auto; }
+  .vid-title{ flex:1; background:transparent; border:none; color:var(--paper); font-size:13.5px; font-family:'Noto Sans',sans-serif; padding:2px 0; min-width:0; }
+  .row.watched .vid-title{ color:var(--paper-dim); text-decoration:line-through; text-decoration-color:var(--hairline); }
+  .vid-title:focus{ outline:none; border-bottom:1px solid var(--red); }
+  .flag{ flex:0 0 auto; background:none; border:none; font-size:14px; cursor:pointer; opacity:0.35; padding:2px 4px; }
+  .flag.on{ opacity:1; }
+  .del{ flex:0 0 auto; background:none; border:none; font-size:13px; cursor:pointer; opacity:0.3; padding:2px 4px; color:var(--paper-dim); }
+  .notes-wrap{ margin-top:4px; }
+  .notes-input{ width:100%; background:var(--panel-2); border:1px solid var(--hairline); border-radius:5px; color:var(--paper-dim); font-size:12px; padding:6px 8px; font-family:'Noto Sans',sans-serif; resize:none; display:none; box-sizing:border-box; }
+  .notes-input.show{ display:block; }
+  .row.weak .notes-input{ display:block; border-color:var(--red-dim); }
+
+  .add-row{ display:flex; align-items:center; gap:6px; padding:10px 14px; color:var(--paper-dim); font-size:12.5px; cursor:pointer; }
+  .add-row:active{ opacity:0.7; }
+
+  .footbar{ position:fixed; bottom:0; left:0; right:0; background:var(--panel); border-top:1px solid var(--hairline); display:flex; gap:8px; padding:10px 16px; padding-bottom:calc(10px + env(safe-area-inset-bottom)); }
+  .footbtn{ flex:1; text-align:center; background:var(--panel-2); border:1px solid var(--hairline); color:var(--paper-dim); font-size:12px; padding:9px 0; border-radius:6px; cursor:pointer; }
+  .footbtn.primary{ background:var(--red-dim); border-color:var(--red); color:var(--paper); }
+
+  ::placeholder{ color:var(--paper-dim); opacity:0.6; }
+
+  .badge-toast{ position:fixed; top:14px; left:50%; transform:translateX(-50%) translateY(-140%); background:var(--panel); border:1px solid var(--gold); border-radius:8px; padding:10px 16px; display:flex; align-items:center; gap:10px; z-index:50; box-shadow:0 8px 24px rgba(0,0,0,0.5); transition:transform 0.4s ease; max-width:88%; }
+  .badge-toast.show{ transform:translateX(-50%) translateY(0); }
+  .badge-toast .bt-icon{ font-family:'Shippori Mincho',serif; font-size:18px; color:var(--gold); width:30px; height:30px; border:1px solid var(--gold); border-radius:50%; display:flex; align-items:center; justify-content:center; flex:0 0 auto; }
+  .badge-toast .bt-text b{ display:block; font-size:12.5px; color:var(--paper); }
+  .badge-toast .bt-text span{ font-size:10.5px; color:var(--paper-dim); }
+
+  .badge-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(140px,1fr)); gap:10px; }
+  .badge{ background:var(--panel); border:1px solid var(--hairline); border-radius:8px; padding:14px 12px; text-align:center; opacity:0.4; filter:grayscale(1); }
+  .badge.unlocked{ opacity:1; filter:none; border-color:var(--gold); background:var(--panel-2); }
+  .badge-icon{ font-family:'Shippori Mincho',serif; font-size:22px; color:var(--paper-dim); width:44px; height:44px; margin:0 auto 8px; border:1.5px solid var(--hairline); border-radius:50%; display:flex; align-items:center; justify-content:center; }
+  .badge.unlocked .badge-icon{ color:var(--gold); border-color:var(--gold); }
+  .badge-name{ font-size:12px; font-weight:600; margin-bottom:3px; }
+  .badge-desc{ font-size:10.5px; color:var(--paper-dim); line-height:1.4; }
+
+  .toast{ position:fixed; bottom:70px; left:50%; transform:translateX(-50%) translateY(20px); opacity:0; background:var(--panel-2); border:1px solid var(--hairline); color:var(--paper); font-size:12px; padding:8px 14px; border-radius:6px; z-index:60; transition:all 0.3s ease; pointer-events:none; }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="kanji">修行の記録 · TRAINING LOG</div>
+  <h1>English Dojo</h1>
+  <div class="sub">Aman Sir — Complete English Course · <span id="totalCount">61</span> kata</div>
+
+  <div class="belt-wrap">
+    <div class="belt-label">
+      <span class="belt-rank" id="beltRank">White Belt</span>
+      <span class="belt-pct" id="beltPct">0%</span>
+    </div>
+    <div class="belt">
+      <div class="belt-fill" id="beltFill" style="width:0%; background:#EAE3D2;">
+        <span class="belt-knot">結</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><b id="statWatched">0</b><span>Watched</span></div>
+    <div class="stat xp"><b id="statXP">0</b><span>XP</span></div>
+    <div class="stat streak"><b id="statStreak">0</b><span>Day streak</span></div>
+    <div class="stat"><b id="statWeak">0</b><span>Weak</span></div>
+  </div>
+</header>
+
+<div class="controls">
+  <div class="pill active" data-filter="all">All</div>
+  <div class="pill" data-filter="unwatched">Unwatched</div>
+  <div class="pill" data-filter="watched">Watched</div>
+  <div class="pill" data-filter="weak">⚑ Weak areas</div>
+  <div class="pill" data-filter="badges">🏅 Seals</div>
+</div>
+
+<div id="badgeToast" class="badge-toast"></div>
+<div id="toast" class="toast"></div>
+
+<div class="content" id="content"></div>
+
+<div class="content" id="badgeSection" style="display:none;">
+  <div class="badge-grid" id="badgeGrid"></div>
+</div>
+
+<div class="footbar">
+  <div class="footbtn" id="btnExport">Export backup</div>
+  <div class="footbtn" id="btnImport">Import backup</div>
+  <div class="footbtn primary" id="btnReset">Reset all</div>
+</div>
+<input type="file" id="fileInput" accept="application/json" style="display:none">
+
+<script>
+const STORAGE_KEY = 'eigo-dojo-state';
+
+// Default chapter/topic structure seeded from Aman Sir's known grammar syllabus.
+// Titles are editable placeholders — rename each row to match the actual video as you go.
+const CHAPTERS = [
+  { name:'Parts of Speech — Intro', count:2 },
+  { name:'Noun', count:3 },
+  { name:'Pronoun', count:3 },
+  { name:'Adjective', count:3 },
+  { name:'Adverb', count:2 },
+  { name:'Preposition', count:4 },
+  { name:'Conjunction', count:2 },
+  { name:'Article & Determiners', count:3 },
+  { name:'Verb', count:3 },
+  { name:'Modals', count:3 },
+  { name:'Subject-Verb Agreement', count:4 },
+  { name:'Tense', count:10 },
+  { name:'Voice', count:8 },
+  { name:'Narration', count:8 },
+  { name:'Conditional Sentences', count:3 },
+];
+
+const BELTS = [
+  { min:0,   name:'White Belt',  color:'#EAE3D2' },
+  { min:15,  name:'Yellow Belt', color:'#D9B84C' },
+  { min:30,  name:'Orange Belt', color:'#D07A32' },
+  { min:45,  name:'Green Belt',  color:'#5C7A4E' },
+  { min:60,  name:'Blue Belt',   color:'#3E6E8C' },
+  { min:80,  name:'Brown Belt',  color:'#6B4A2E' },
+  { min:100, name:'Black Belt',  color:'#161616' },
+];
+
+const BADGES = [
+  { id:'first_strike',    icon:'一',  name:'First Strike',    desc:'Complete your first video',              check: s => s.watched >= 1 },
+  { id:'ten_kata',        icon:'十',  name:'Ten Kata',         desc:'Complete 10 videos',                     check: s => s.watched >= 10 },
+  { id:'quarter_scroll',  icon:'25', name:'Quarter Scroll',   desc:'Reach 25% progress',                     check: s => s.pct >= 25 },
+  { id:'halfway_blade',   icon:'半',  name:'Halfway Blade',    desc:'Reach 50% progress',                     check: s => s.pct >= 50 },
+  { id:'full_mastery',    icon:'皆',  name:'Full Mastery',     desc:'Complete every video',                   check: s => s.pct >= 100 },
+  { id:'week_streak',     icon:'七',  name:'Iron Discipline',  desc:'Reach a 7-day study streak',             check: s => s.streak >= 7 },
+  { id:'fortnight_streak',icon:'十四', name:'Unbroken Will',   desc:'Reach a 14-day study streak',            check: s => s.streak >= 14 },
+  { id:'weakness_named',  icon:'弱',  name:'Know Thy Weakness',desc:'Flag 3 weak topics with revision notes', check: s => s.weakWithNotes >= 3 },
+  { id:'weakness_slayer', icon:'克',  name:'Weakness Slayer',  desc:'Clear 5 weak topics after revising them',check: s => s.weakCleared >= 5 },
+];
+
+function buildDefaultData(){
+  let idx = 1;
+  const videos = [];
+  CHAPTERS.forEach((ch, ci) => {
+    for(let i=0;i<ch.count;i++){
+      videos.push({ id: idx, chapter: ci, title: 'Video ' + idx, watched: false, weak: false, notes: '' });
+      idx++;
+    }
+  });
+  return { videos, openChapters: {0:true}, streak:0, lastActiveDate:null, weakCleared:0, badges:[] };
+}
+
+function normalize(parsed){
+  if(!parsed || !parsed.videos || !parsed.videos.length) return buildDefaultData();
+  if(parsed.streak === undefined) parsed.streak = 0;
+  if(parsed.lastActiveDate === undefined) parsed.lastActiveDate = null;
+  if(parsed.weakCleared === undefined) parsed.weakCleared = 0;
+  if(parsed.badges === undefined) parsed.badges = [];
+  if(parsed.openChapters === undefined) parsed.openChapters = {0:true};
+  return parsed;
+}
+
+function load(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return buildDefaultData();
+    return normalize(JSON.parse(raw));
+  }catch(e){
+    return buildDefaultData();
+  }
+}
+
+function save(){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }catch(e){
+    console.error('Save failed', e);
+  }
+}
+
+function showToast(msg){
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(window._toastTimeout);
+  window._toastTimeout = setTimeout(() => el.classList.remove('show'), 2400);
+}
+
+function markActivity(){
+  const today = new Date().toDateString();
+  if(state.lastActiveDate === today) return;
+  const yesterday = new Date(Date.now() - 86400000).toDateString();
+  state.streak = (state.lastActiveDate === yesterday) ? state.streak + 1 : 1;
+  state.lastActiveDate = today;
+}
+
+function showBadgeToast(b){
+  const el = document.getElementById('badgeToast');
+  el.innerHTML = `<div class="bt-icon">${b.icon}</div><div class="bt-text"><b>Seal earned — ${b.name}</b><span>${b.desc}</span></div>`;
+  el.classList.add('show');
+  clearTimeout(window._badgeTimeout);
+  window._badgeTimeout = setTimeout(() => el.classList.remove('show'), 3200);
+}
+
+function checkBadges(stats){
+  BADGES.forEach(b => {
+    if(!state.badges.includes(b.id) && b.check(stats)){
+      state.badges.push(b.id);
+      showBadgeToast(b);
+    }
+  });
+}
+
+let state = null;
+let filter = 'all';
+let nextId = 1;
+
+function belt(pct){
+  let current = BELTS[0];
+  for(const b of BELTS){ if(pct >= b.min) current = b; }
+  return current;
+}
+
+function recalcNextId(){
+  nextId = state.videos.reduce((m,v) => Math.max(m, v.id), 0) + 1;
+}
+
+function render(){
+  const total = state.videos.length;
+  const watched = state.videos.filter(v=>v.watched).length;
+  const weak = state.videos.filter(v=>v.weak).length;
+  const pct = total ? Math.round((watched/total)*100) : 0;
+  const b = belt(pct);
+
+  document.getElementById('totalCount').textContent = total;
+  document.getElementById('beltRank').textContent = b.name;
+  document.getElementById('beltPct').textContent = pct + '%';
+  const fill = document.getElementById('beltFill');
+  fill.style.width = pct + '%';
+  fill.style.background = b.color;
+
+  const weakWithNotes = state.videos.filter(v=>v.weak && v.notes.trim()!=='').length;
+  const xp = watched*10 + state.badges.length*25;
+
+  document.getElementById('statWatched').textContent = watched;
+  document.getElementById('statXP').textContent = xp;
+  document.getElementById('statStreak').textContent = state.streak;
+  document.getElementById('statWeak').textContent = weak;
+
+  checkBadges({ watched, pct, streak: state.streak, weakWithNotes, weakCleared: state.weakCleared });
+
+  const badgeSection = document.getElementById('badgeSection');
+  const content = document.getElementById('content');
+
+  if(filter === 'badges'){
+    content.style.display = 'none';
+    badgeSection.style.display = 'block';
+    const grid = document.getElementById('badgeGrid');
+    grid.innerHTML = '';
+    BADGES.forEach(bd => {
+      const unlocked = state.badges.includes(bd.id);
+      const tile = document.createElement('div');
+      tile.className = 'badge' + (unlocked ? ' unlocked' : '');
+      tile.innerHTML = `<div class="badge-icon">${bd.icon}</div><div class="badge-name">${bd.name}</div><div class="badge-desc">${bd.desc}</div>`;
+      grid.appendChild(tile);
+    });
+    return;
+  }
+  content.style.display = 'block';
+  badgeSection.style.display = 'none';
+  content.innerHTML = '';
+
+  let anyShown = false;
+
+  CHAPTERS.forEach((ch, ci) => {
+    const vids = state.videos.filter(v => v.chapter === ci).filter(v => {
+      if(filter === 'unwatched') return !v.watched;
+      if(filter === 'watched') return v.watched;
+      if(filter === 'weak') return v.weak;
+      return true;
+    });
+    if(filter !== 'all' && vids.length === 0) return;
+    anyShown = true;
+
+    const chDone = state.videos.filter(v=>v.chapter===ci && v.watched).length;
+    const chTotal = state.videos.filter(v=>v.chapter===ci).length;
+
+    const chapEl = document.createElement('div');
+    chapEl.className = 'chapter' + (state.openChapters[ci] ? ' open' : '');
+
+    const head = document.createElement('div');
+    head.className = 'chapter-head';
+    head.innerHTML = `
+      <div class="chapter-title">
+        <span class="chapter-num">${String(ci+1).padStart(2,'0')}</span>
+        <span class="chapter-name">${ch.name}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span class="chapter-meta">${chDone}/${chTotal}</span>
+        <span class="chapter-arrow">▶</span>
+      </div>`;
+    head.onclick = () => {
+      state.openChapters[ci] = !state.openChapters[ci];
+      save(); render();
+    };
+    chapEl.appendChild(head);
+
+    const body = document.createElement('div');
+    body.className = 'chapter-body';
+
+    vids.forEach(v => {
+      const row = document.createElement('div');
+      row.className = 'row' + (v.watched?' watched':'') + (v.weak?' weak':'');
+
+      const check = document.createElement('div');
+      check.className = 'check';
+      check.textContent = '✓';
+      check.onclick = () => {
+        v.watched = !v.watched;
+        if(v.watched) markActivity();
+        save(); render();
+      };
+      row.appendChild(check);
+
+      const main = document.createElement('div');
+      main.className = 'row-main';
+
+      const top = document.createElement('div');
+      top.className = 'row-top';
+      top.innerHTML = `<span class="vid-idx">${String(v.id).padStart(2,'0')}</span>`;
+
+      const titleInput = document.createElement('input');
+      titleInput.className = 'vid-title';
+      titleInput.value = v.title;
+      titleInput.placeholder = 'Video title';
+      titleInput.onchange = (e) => { v.title = e.target.value; save(); };
+      top.appendChild(titleInput);
+
+      const flagBtn = document.createElement('button');
+      flagBtn.className = 'flag' + (v.weak ? ' on' : '');
+      flagBtn.textContent = '⚑';
+      flagBtn.onclick = () => {
+        if(v.weak && v.notes.trim()!==''){ state.weakCleared++; }
+        v.weak = !v.weak;
+        save(); render();
+      };
+      top.appendChild(flagBtn);
+
+      const delBtn = document.createElement('button');
+      delBtn.className = 'del';
+      delBtn.textContent = '✕';
+      delBtn.onclick = () => {
+        state.videos = state.videos.filter(x => x.id !== v.id);
+        save(); render();
+      };
+      top.appendChild(delBtn);
+
+      main.appendChild(top);
+
+      const notesWrap = document.createElement('div');
+      notesWrap.className = 'notes-wrap';
+      const notesInput = document.createElement('textarea');
+      notesInput.className = 'notes-input' + (v.weak ? ' show' : '');
+      notesInput.rows = 2;
+      notesInput.placeholder = 'What to revise / practice questions to redo...';
+      notesInput.value = v.notes;
+      notesInput.onchange = (e) => { v.notes = e.target.value; save(); };
+      notesWrap.appendChild(notesInput);
+      main.appendChild(notesWrap);
+
+      row.appendChild(main);
+      body.appendChild(row);
+    });
+
+    const addRow = document.createElement('div');
+    addRow.className = 'add-row';
+    addRow.textContent = '+ add video to this chapter';
+    addRow.onclick = () => {
+      recalcNextId();
+      state.videos.push({ id: nextId, chapter: ci, title: 'Video ' + nextId, watched: false, weak: false, notes: '' });
+      state.openChapters[ci] = true;
+      save(); render();
+    };
+    body.appendChild(addRow);
+
+    chapEl.appendChild(body);
+    content.appendChild(chapEl);
+  });
+
+  if(!anyShown){
+    content.innerHTML = '<div class="empty-state">No videos match this filter.</div>';
+  }
+}
+
+// filter pills
+document.querySelectorAll('.pill').forEach(p => {
+  p.onclick = () => {
+    filter = p.dataset.filter;
+    document.querySelectorAll('.pill').forEach(x => x.classList.remove('active'));
+    p.classList.add('active');
+    render();
+  };
+});
+
+// export backup
+document.getElementById('btnExport').onclick = () => {
+  try{
+    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const dateStr = new Date().toISOString().slice(0,10);
+    a.href = url;
+    a.download = `eigo-dojo-backup-${dateStr}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('Backup exported');
+  }catch(e){
+    showToast('Export failed');
+  }
+};
+
+// import backup
+document.getElementById('btnImport').onclick = () => {
+  document.getElementById('fileInput').click();
+};
+document.getElementById('fileInput').onchange = (e) => {
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try{
+      const parsed = JSON.parse(ev.target.result);
+      if(!parsed.videos || !Array.isArray(parsed.videos)) throw new Error('bad format');
+      state = normalize(parsed);
+      save();
+      render();
+      showToast('Backup imported');
+    }catch(err){
+      showToast('Import failed — invalid file');
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+};
+
+// reset
+document.getElementById('btnReset').onclick = () => {
+  if(!confirm('Reset all progress? This clears every checkmark, flag, note, and streak. This cannot be undone.')) return;
+  state = buildDefaultData();
+  save();
+  render();
+  showToast('Progress reset');
+};
+
+// init
+state = load();
+recalcNextId();
+render();
+
+// service worker (offline support + installability)
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch((err) => {
+      console.error('Service worker registration failed', err);
+    });
+  });
+}
+</script>
+</body>
+</html>
